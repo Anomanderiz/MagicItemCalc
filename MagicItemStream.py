@@ -1,7 +1,6 @@
 from shiny import App, render, ui, reactive
 import random
 
-# --- Core Logic (Extracted for clarity) ---
 def roll_price(r: str) -> int:
     if r == "Common":
         return (random.randint(1, 6) + 1) * 10
@@ -28,9 +27,59 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 29: return 25
     return 30
 
-# --- UI Definition ---
+# --- Custom Mystical Styles ---
+mystical_css = """
+    body {
+        background: radial-gradient(circle at center, #0d1b2a 0%, #000814 100%);
+        color: #e0e1dd;
+        font-family: 'Segoe UI', serif;
+    }
+    .card {
+        background-color: rgba(27, 38, 59, 0.8);
+        border: 1px solid #778da9;
+        box-shadow: 0 0 15px rgba(119, 141, 169, 0.3);
+        border-radius: 12px;
+    }
+    .card-header {
+        background-color: #415a77 !important;
+        color: #e0e1dd;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .sidebar {
+        background-color: #1b263b !important;
+        border-right: 2px solid #778da9;
+    }
+    .btn-primary {
+        background-color: #778da9;
+        border: none;
+        color: #0d1b2a;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background-color: #e0e1dd;
+        box-shadow: 0 0 10px #e0e1dd;
+        color: #0d1b2a;
+    }
+    .shiny-input-container {
+        color: #778da9;
+    }
+    h1, h3 {
+        color: #e0e1dd;
+        text-shadow: 0 0 8px rgba(224, 225, 221, 0.5);
+    }
+    .text-mystic {
+        color: #00b4d8;
+        font-weight: bold;
+    }
+"""
+
 app_ui = ui.page_fluid(
-    ui.panel_title("🧙‍♂️ Mystic Market Valuator"),
+    ui.tags.style(mystical_css),
+    ui.panel_title(ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4")),
+    
     ui.layout_sidebar(
         ui.sidebar(
             ui.input_select(
@@ -41,33 +90,28 @@ app_ui = ui.page_fluid(
             ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
             
             ui.tooltip(
-                ui.input_numeric("persuasion_roll", "Persuasion Check (d20 + Mods)", value=10, min=1, max=40),
-                "Higher rolls unlock steeper mercantile concessions.",
+                ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
+                "The silver-tongued may find lower prices.",
                 id="persuasion_tip"
             ),
             
-            ui.input_action_button("reroll", "🎲 Re-roll Base Price", class_="btn-primary w-100"),
+            ui.input_action_button("reroll", "Invoke New Price", class_="btn-primary w-100 mt-3"),
             
             ui.hr(),
-            ui.markdown(
-                "**Guidance:** Adjust the sliders and rolls to see the price update *instantly* without a full page refresh."
-            ),
+            ui.markdown("*Adjust the weave of fate to see the price shift.*"),
         ),
         
         ui.card(
-            ui.card_header("Valuation Summary"),
+            ui.card_header("Arcane Valuation"),
             ui.output_ui("results_display"),
+            full_screen=True,
         ),
     ),
 )
 
-# --- Server Logic ---
 def server(input, output, session):
-    # This reactive value stores our base price so it persists across UI changes 
-    # until the user explicitly hits 'Reroll' or changes rarity.
     base_price = reactive.Value(0)
 
-    # Initialize or update price when rarity changes or button is clicked
     @reactive.Effect
     @reactive.event(input.rarity, input.reroll)
     def _():
@@ -76,25 +120,24 @@ def server(input, output, session):
     @output
     @render.ui
     def results_display():
-        # Reactive dependencies are tracked automatically
         bp = base_price()
         p_disc = get_persuasion_discount(input.persuasion_roll())
         total_disc = input.discount() + p_disc
         final_price = int(bp * (1 - total_disc / 100))
         
-        # Determine a color for the message based on discount
-        msg_color = "text-success" if total_disc > 20 else "text-muted"
-        
         return ui.div(
-            ui.p(ui.strong("Base Price: "), f"{bp:,} gp"),
-            ui.p(ui.strong("Persuasion Discount: "), f"{p_disc}%"),
-            ui.p(ui.strong("Total Discount: "), f"{total_disc}%"),
-            ui.hr(),
-            ui.h3(f"Final Price: {final_price:,} gp", class_="text-primary"),
-            ui.p(
-                "The merchant looks pleased with the deal." if total_disc < 40 
-                else "You've practically robbed them blind.",
-                class_=f"fst-italic {msg_color}"
+            ui.p(ui.strong("Base Market Value: "), f"{bp:,} gp"),
+            ui.p(ui.strong("Charisma Concession: "), f"{p_disc}%"),
+            ui.p(ui.strong("Total Reduction: "), f"{total_disc}%"),
+            ui.hr(style="border-top: 1px solid #778da9;"),
+            ui.h3(f"Final Tribute: {final_price:,} gp", class_="text-mystic"),
+            ui.div(
+                ui.p(
+                    "The merchant awaits your coin." if total_disc < 30 
+                    else "A legendary bargain has been struck.",
+                    class_="fst-italic",
+                    style="color: #778da9;"
+                )
             )
         )
 
