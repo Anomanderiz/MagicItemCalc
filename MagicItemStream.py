@@ -30,13 +30,13 @@ glass_css = """
         height: 100vh;
         z-index: -1;
         overflow: hidden;
-        background: #000; /* Fallback if video fails */
+        background: #000;
     }
     #bg-video {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: brightness(0.4) saturate(1.2);
+        filter: brightness(0.35) saturate(1.3) contrast(1.1);
     }
 
     body {
@@ -44,57 +44,60 @@ glass_css = """
         padding: 0;
         color: #ffffff;
         background-color: #000;
+        font-family: 'Garamond', serif;
     }
 
     /* Glassmorphism Effect */
     .glass-panel {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(15px) saturate(180%);
-        -webkit-backdrop-filter: blur(15px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 20px !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
-        padding: 20px;
+        background: rgba(255, 255, 255, 0.08) !important;
+        backdrop-filter: blur(20px) saturate(200%);
+        -webkit-backdrop-filter: blur(20px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 24px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        padding: 25px;
     }
 
     h1 {
         font-weight: 800;
-        letter-spacing: 2px;
-        text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        font-family: 'Palatino', serif;
     }
 
     .legible-white {
         color: #ffffff !important;
         font-weight: 500;
-        text-shadow: 1px 1px 3px rgba(0,0,0,1);
+        text-shadow: 2px 2px 4px rgba(0,0,0,1);
     }
 
     .text-mystic {
-        color: #00e5ff;
+        color: #00f2ff;
         font-weight: 800;
-        text-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
+        text-shadow: 0 0 25px rgba(0, 242, 255, 0.9);
     }
 
     .btn-glass {
         background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         color: white;
-        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: 0.3s ease-in-out;
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     .btn-glass:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.35);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
         color: white;
     }
 
-    /* Input focus colors */
-    .form-control:focus, .form-select:focus {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        border-color: #00e5ff;
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+    .form-control, .form-select {
+        background: rgba(0, 0, 0, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
     }
 """
 
@@ -114,25 +117,29 @@ app_ui = ui.page_fluid(
         id="video-container"
     ),
 
-    ui.h1("🔮 MYSTIC MARKET VALUATOR", class_="text-center py-5 text-white"),
+    ui.h1("Madame Morrible's Magic Mores", class_="text-center py-5 text-white"),
     
     ui.layout_sidebar(
         ui.sidebar(
             ui.div(
-                ui.input_select("rarity", "Item Rarity", 
+                ui.input_select("rarity", "Artifact Rarity", 
                                choices=["Common", "Uncommon", "Rare", "Very Rare"]),
                 ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
-                ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
-                ui.input_action_button("reroll", "Invoke Price", class_="btn-glass w-100 mt-3"),
+                ui.tooltip(
+                    ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
+                    "Higher rolls sway the Madame's rigid pricing.",
+                    id="persuasion_tip"
+                ),
+                ui.input_action_button("reroll", "Invoke Valuation", class_="btn-glass w-100 mt-3"),
                 class_="glass-panel"
             ),
             ui.hr(style="opacity: 0.2;"),
-            ui.span("Adjust the weave to reveal the cost.", class_="legible-white ms-2")
+            ui.span("Adjust the weave to reveal the cost.", class_="legible-white ms-2 fst-italic")
         ),
         
         ui.div(
             ui.card(
-                ui.card_header("Valuation Record", style="background:transparent; color: #fff;"),
+                ui.card_header("Arcane Receipt", style="background:transparent; color: #fff; font-weight: bold;"),
                 ui.output_ui("valuation_output"),
                 class_="glass-panel"
             )
@@ -158,13 +165,13 @@ def server(input, output, session):
         
         return ui.div(
             ui.p(ui.strong("Market Value: "), f"{bp:,} gp", class_="legible-white"),
-            ui.p(ui.strong("Persuasion Bonus: "), f"{p_disc}%", class_="legible-white"),
-            ui.p(ui.strong("Final Concession: "), f"{total_disc}%", class_="legible-white"),
-            ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.2);"),
+            ui.p(ui.strong("Influence Bonus: "), f"{p_disc}%", class_="legible-white"),
+            ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
+            ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The deal is struck in silver.", style="font-style: italic; opacity: 0.6;")
+            ui.p("The stars are aligned for this transaction.", style="font-style: italic; opacity: 0.7;")
         )
 
-# Identify the 'www' directory relative to the script location
+# Identifying the 'www' directory
 www_path = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=str(www_path))
