@@ -20,7 +20,7 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 26: return 20
     return 30
 
-# --- Glassmorphic Style & Video Layout ---
+# --- Enhanced Glassmorphic Style ---
 glass_css = """
     #video-container {
         position: fixed;
@@ -47,7 +47,6 @@ glass_css = """
         font-family: 'Garamond', serif;
     }
 
-    /* Glassmorphism Effect */
     .glass-panel {
         background: rgba(255, 255, 255, 0.08) !important;
         backdrop-filter: blur(20px) saturate(200%);
@@ -66,10 +65,28 @@ glass_css = """
         font-family: 'Palatino', serif;
     }
 
-    .legible-white {
+    /* Enforced White Labels for Inputs */
+    .control-label, label, .legible-white {
         color: #ffffff !important;
         font-weight: 500;
         text-shadow: 2px 2px 4px rgba(0,0,0,1);
+    }
+
+    /* Large Header for the Receipt Card */
+    .receipt-title {
+        font-size: 1.8rem !important;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+
+    /* Larger Instructional Text */
+    .weave-instruction {
+        color: #ffffff !important;
+        font-size: 1.4rem;
+        font-style: italic;
+        text-shadow: 2px 2px 5px rgba(0, 0, 0, 1);
+        display: block;
+        margin-top: 20px;
     }
 
     .text-mystic {
@@ -85,7 +102,6 @@ glass_css = """
         transition: 0.3s ease-in-out;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1px;
     }
     .btn-glass:hover {
         background: rgba(255, 255, 255, 0.35);
@@ -104,7 +120,7 @@ glass_css = """
 app_ui = ui.page_fluid(
     ui.tags.style(glass_css),
     
-    # Static Video Background
+    # Static Video Background Layer
     ui.tags.div(
         ui.tags.video(
             ui.tags.source(src="Magic_Popup_Shop (1).mp4", type="video/mp4"),
@@ -125,21 +141,17 @@ app_ui = ui.page_fluid(
                 ui.input_select("rarity", "Artifact Rarity", 
                                choices=["Common", "Uncommon", "Rare", "Very Rare"]),
                 ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
-                ui.tooltip(
-                    ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
-                    "Higher rolls sway the Madame's rigid pricing.",
-                    id="persuasion_tip"
-                ),
+                ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
                 ui.input_action_button("reroll", "Invoke Valuation", class_="btn-glass w-100 mt-3"),
                 class_="glass-panel"
             ),
             ui.hr(style="opacity: 0.2;"),
-            ui.span("Adjust the weave to reveal the cost.", class_="legible-white ms-2 fst-italic")
+            ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2")
         ),
         
         ui.div(
             ui.card(
-                ui.card_header("Arcane Receipt", style="background:transparent; color: #fff; font-weight: bold;"),
+                ui.card_header("Arcane Receipt", class_="receipt-title", style="background:transparent; color: #fff;"),
                 ui.output_ui("valuation_output"),
                 class_="glass-panel"
             )
@@ -169,9 +181,9 @@ def server(input, output, session):
             ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The stars are aligned for this transaction.", style="font-style: italic; opacity: 0.7;")
+            ui.p("Inscribed in the ledger of destiny.", style="font-style: italic; opacity: 0.7;")
         )
 
-# Identifying the 'www' directory
+# Identifying the 'www' directory for static assets
 www_path = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=str(www_path))
