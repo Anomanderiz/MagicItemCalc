@@ -1,25 +1,8 @@
-# save as app.py
-import streamlit as st
+from shiny import App, render, ui, reactive
 import random
 
-st.set_page_config(page_title="Magic Item Valuator")
-
-st.title("🧙‍♂️ Mystic Market Valuator")
-
-rarity = st.selectbox("Choose item rarity:", ["Common", "Uncommon", "Rare", "Very Rare"])
-discount = st.slider("Manual Discount (%)", 0, 100, 0)
-
-# Persuasion check input
-persuasion_roll = st.number_input(
-    "Persuasion check total (d20 + modifiers):",
-    min_value=1,
-    max_value=40,
-    step=1,
-    value=10,
-    help="Only rolls of 15 or higher give a discount."
-)
-
-def roll_price(r):
+# --- Core Logic (Extracted for clarity) ---
+def roll_price(r: str) -> int:
     if r == "Common":
         return (random.randint(1, 6) + 1) * 10
     elif r == "Uncommon":
@@ -36,38 +19,83 @@ def roll_price(r):
         return int(base * (1 + markup))
     return 0
 
-def persuasion_discount_from_roll(roll: int) -> int:
-    """Return percentage discount from Persuasion roll."""
-    if roll < 15:
-        return 0
-    if roll <= 17:
-        return 5
-    if roll <= 20:
-        return 10
-    if roll <= 23:
-        return 15
-    if roll <= 26:
-        return 20
-    if roll <= 29:
-        return 25
-    return 30  # 30+ is capped at 30%
+def get_persuasion_discount(roll: int) -> int:
+    if roll < 15: return 0
+    if roll <= 17: return 5
+    if roll <= 20: return 10
+    if roll <= 23: return 15
+    if roll <= 26: return 20
+    if roll <= 29: return 25
+    return 30
 
-# Roll price once and store it
-if "base_price" not in st.session_state or st.button("Re-roll Price"):
-    st.session_state.base_price = roll_price(rarity)
+# --- UI Definition ---
+app_ui = ui.page_fluid(
+    ui.panel_title("🧙‍♂️ Mystic Market Valuator"),
+    ui.layout_sidebar(
+        ui.sidebar(
+            ui.input_select(
+                "rarity", 
+                "Item Rarity", 
+                choices=["Common", "Uncommon", "Rare", "Very Rare"]
+            ),
+            ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
+            
+            ui.tooltip(
+                ui.input_numeric("persuasion_roll", "Persuasion Check (d20 + Mods)", value=10, min=1, max=40),
+                "Higher rolls unlock steeper mercantile concessions.",
+                id="persuasion_tip"
+            ),
+            
+            ui.input_action_button("reroll", "🎲 Re-roll Base Price", class_="btn-primary w-100"),
+            
+            ui.hr(),
+            ui.markdown(
+                "**Guidance:** Adjust the sliders and rolls to see the price update *instantly* without a full page refresh."
+            ),
+        ),
+        
+        ui.card(
+            ui.card_header("Valuation Summary"),
+            ui.output_ui("results_display"),
+        ),
+    ),
+)
 
-base = st.session_state.get("base_price", 0)
+# --- Server Logic ---
+def server(input, output, session):
+    # This reactive value stores our base price so it persists across UI changes 
+    # until the user explicitly hits 'Reroll' or changes rarity.
+    base_price = reactive.Value(0)
 
-persuasion_discount = persuasion_discount_from_roll(int(persuasion_roll))
+    # Initialize or update price when rarity changes or button is clicked
+    @reactive.Effect
+    @reactive.event(input.rarity, input.reroll)
+    def _():
+        base_price.set(roll_price(input.rarity()))
 
-total_discount = discount + persuasion_discount
-# Optional: uncomment to cap total discount at something saner
-# total_discount = min(total_discount, 60)
+    @output
+    @render.ui
+    def results_display():
+        # Reactive dependencies are tracked automatically
+        bp = base_price()
+        p_disc = get_persuasion_discount(input.persuasion_roll())
+        total_disc = input.discount() + p_disc
+        final_price = int(bp * (1 - total_disc / 100))
+        
+        # Determine a color for the message based on discount
+        msg_color = "text-success" if total_disc > 20 else "text-muted"
+        
+        return ui.div(
+            ui.p(ui.strong("Base Price: "), f"{bp:,} gp"),
+            ui.p(ui.strong("Persuasion Discount: "), f"{p_disc}%"),
+            ui.p(ui.strong("Total Discount: "), f"{total_disc}%"),
+            ui.hr(),
+            ui.h3(f"Final Price: {final_price:,} gp", class_="text-primary"),
+            ui.p(
+                "The merchant looks pleased with the deal." if total_disc < 40 
+                else "You've practically robbed them blind.",
+                class_=f"fst-italic {msg_color}"
+            )
+        )
 
-final = int(base * (1 - total_discount / 100))
-
-st.markdown(f"**Base Price:** {base:,} gp")
-st.markdown(f"**Manual Discount:** {discount}%")
-st.markdown(f"**Persuasion Discount from roll {int(persuasion_roll)}:** {persuasion_discount}%")
-st.markdown(f"**Total Discount:** {total_discount}%")
-st.markdown(f"**Final Price after discounts:** {final:,} gp")
+app = App(app_ui, server)
