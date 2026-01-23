@@ -1,9 +1,11 @@
+from pathlib import Path
 from shiny import App, render, ui, reactive
 import random
 
-# --- Arcane Determinism ---
+# --- Arcane Determinism Logic ---
 def roll_price(r: str) -> int:
-    if r == "Common": return (random.randint(1, 6) + 1) * 10
+    if r == "Common":
+        return (random.randint(1, 6) + 1) * 10
     elif r == "Uncommon":
         return int(random.randint(1, 6) * 100 * (1 + random.choice([0, 0.10, 0.15])))
     elif r == "Rare":
@@ -18,13 +20,8 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 26: return 20
     return 30
 
-# --- The Glass & Chrome Esthetic ---
-# If running locally with a 'www' folder, use "Magic_Popup_Shop (1).mp4"
-# For GitHub, ensure this is the direct 'raw' link.
-VIDEO_URL = "https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/www/Magic_Popup_Shop%20(1).mp4"
-
+# --- Glassmorphic Style & Video Layout ---
 glass_css = """
-    /* The Living Background */
     #video-container {
         position: fixed;
         top: 0;
@@ -33,6 +30,7 @@ glass_css = """
         height: 100vh;
         z-index: -1;
         overflow: hidden;
+        background: #000; /* Fallback if video fails */
     }
     #bg-video {
         width: 100%;
@@ -44,78 +42,69 @@ glass_css = """
     body {
         margin: 0;
         padding: 0;
-        background-color: #000; /* Fallback */
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-
-    /* Glassmorphic Containers */
-    .container-fluid {
-        z-index: 1;
-        padding: 3rem;
-        min-height: 100vh;
-    }
-
-    .card, .sidebar {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(16px) saturate(180%);
-        -webkit-backdrop-filter: blur(16px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 20px !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
         color: #ffffff;
+        background-color: #000;
     }
 
-    /* Typography & Legibility */
+    /* Glassmorphism Effect */
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(15px) saturate(180%);
+        -webkit-backdrop-filter: blur(15px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+        padding: 20px;
+    }
+
     h1 {
         font-weight: 800;
-        letter-spacing: -1px;
-        text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        letter-spacing: 2px;
+        text-shadow: 0 4px 10px rgba(0,0,0,0.8);
     }
-    
-    label, .weave-instruction, .legible-metric {
+
+    .legible-white {
         color: #ffffff !important;
         font-weight: 500;
-        text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        text-shadow: 1px 1px 3px rgba(0,0,0,1);
     }
 
     .text-mystic {
         color: #00e5ff;
-        font-weight: 900;
-        text-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+        font-weight: 800;
+        text-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
     }
 
-    /* Sleek Silver Controls */
     .btn-glass {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         color: white;
-        backdrop-filter: blur(4px);
-        transition: 0.2s all ease-in-out;
-        font-weight: bold;
-        padding: 12px;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-weight: 700;
     }
     .btn-glass:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.3);
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255,255,255,0.2);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
         color: white;
     }
-    
-    /* Input adjustments */
-    .form-control, .form-select {
-        background: rgba(0, 0, 0, 0.3) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
+
+    /* Input focus colors */
+    .form-control:focus, .form-select:focus {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-color: #00e5ff;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
     }
 """
 
 app_ui = ui.page_fluid(
     ui.tags.style(glass_css),
     
-    # Atmospheric Layer
+    # Static Video Background
     ui.tags.div(
         ui.tags.video(
-            ui.tags.source(src=VIDEO_URL, type="video/mp4"),
+            ui.tags.source(src="Magic_Popup_Shop (1).mp4", type="video/mp4"),
             id="bg-video",
             autoplay=True,
             loop=True,
@@ -125,22 +114,28 @@ app_ui = ui.page_fluid(
         id="video-container"
     ),
 
-    ui.h1("🔮 MYSTIC MARKET", class_="text-center py-5 text-white"),
+    ui.h1("🔮 MYSTIC MARKET VALUATOR", class_="text-center py-5 text-white"),
     
     ui.layout_sidebar(
         ui.sidebar(
-            ui.input_select("rarity", "Artifact Rarity", 
-                           choices=["Common", "Uncommon", "Rare", "Very Rare"]),
-            ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
-            ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
-            ui.input_action_button("reroll", "Invoke New Valuation", class_="btn-glass w-100 mt-4"),
-            ui.hr(style="opacity: 0.3;"),
-            ui.span("Observe as the weave shifts with every adjustment.", class_="weave-instruction"),
+            ui.div(
+                ui.input_select("rarity", "Item Rarity", 
+                               choices=["Common", "Uncommon", "Rare", "Very Rare"]),
+                ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
+                ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
+                ui.input_action_button("reroll", "Invoke Price", class_="btn-glass w-100 mt-3"),
+                class_="glass-panel"
+            ),
+            ui.hr(style="opacity: 0.2;"),
+            ui.span("Adjust the weave to reveal the cost.", class_="legible-white ms-2")
         ),
         
-        ui.card(
-            ui.card_header("Arcane Receipt", style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1);"),
-            ui.output_ui("valuation_output"),
+        ui.div(
+            ui.card(
+                ui.card_header("Valuation Record", style="background:transparent; color: #fff;"),
+                ui.output_ui("valuation_output"),
+                class_="glass-panel"
+            )
         ),
     ),
 )
@@ -162,12 +157,14 @@ def server(input, output, session):
         final_price = int(bp * (1 - total_disc / 100))
         
         return ui.div(
-            ui.p(ui.strong("Base Value: "), f"{bp:,} gp", class_="legible-metric"),
-            ui.p(ui.strong("Silver-Tongue Bonus: "), f"{p_disc}%", class_="legible-metric"),
-            ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-metric"),
+            ui.p(ui.strong("Market Value: "), f"{bp:,} gp", class_="legible-white"),
+            ui.p(ui.strong("Persuasion Bonus: "), f"{p_disc}%", class_="legible-white"),
+            ui.p(ui.strong("Final Concession: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.2);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The transaction is inscribed in the stars.", style="font-style: italic; opacity: 0.7; font-size: 0.9rem;")
+            ui.p("The deal is struck in silver.", style="font-style: italic; opacity: 0.6;")
         )
 
-app = App(app_ui, server)
+# Identify the 'www' directory relative to the script location
+www_path = Path(__file__).parent / "www"
+app = App(app_ui, server, static_assets=str(www_path))
