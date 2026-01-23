@@ -1,21 +1,18 @@
 from shiny import App, render, ui, reactive
 import random
 
+# --- Logic Remains Unchanged ---
 def roll_price(r: str) -> int:
-    if r == "Common":
-        return (random.randint(1, 6) + 1) * 10
+    if r == "Common": return (random.randint(1, 6) + 1) * 10
     elif r == "Uncommon":
         base = random.randint(1, 6) * 100
-        markup = random.choice([0, 0.10, 0.15])
-        return int(base * (1 + markup))
+        return int(base * (1 + random.choice([0, 0.10, 0.15])))
     elif r == "Rare":
         base = (random.randint(1, 10) + random.randint(1, 10)) * 1000
-        markup = random.uniform(0.10, 0.15)
-        return int(base * (1 + markup))
+        return int(base * (1 + random.uniform(0.10, 0.15)))
     elif r == "Very Rare":
         base = (random.randint(1, 4) + 1) * 10000
-        markup = random.uniform(0.10, 0.15)
-        return int(base * (1 + markup))
+        return int(base * (1 + random.uniform(0.10, 0.15)))
     return 0
 
 def get_persuasion_discount(roll: int) -> int:
@@ -27,84 +24,91 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 29: return 25
     return 30
 
-# --- Refined Mystical Styles ---
+# --- The Visual & Auditory Weave ---
+# REPLACE THIS URL with your actual GitHub Raw link
+VIDEO_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/Magic_Popup_Shop%20(1).mp4"
+
 mystical_css = """
+    /* Background Video Layering */
+    #bg-video {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        z-index: -1;
+        object-fit: cover;
+        filter: brightness(0.4) contrast(1.1); /* Darken to ensure text pop */
+    }
+
     body {
-        background: radial-gradient(circle at center, #0d1b2a 0%, #000814 100%);
+        background-color: #000814;
         color: #e0e1dd;
         font-family: 'Segoe UI', serif;
+        overflow-x: hidden;
     }
+
+    /* Translucent containers to let the video peek through */
+    .container-fluid {
+        position: relative;
+        z-index: 1;
+        background: transparent;
+    }
+
     .card {
-        background-color: rgba(27, 38, 59, 0.8);
-        border: 1px solid #778da9;
-        box-shadow: 0 0 20px rgba(0, 180, 216, 0.1);
+        background-color: rgba(13, 27, 42, 0.7) !important;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(119, 141, 169, 0.4);
         border-radius: 12px;
     }
-    .card-header {
-        background-color: #415a77 !important;
-        color: #ffffff !important;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-    }
+
     .sidebar {
-        background-color: #1b263b !important;
-        border-right: 2px solid #778da9;
+        background-color: rgba(27, 38, 59, 0.8) !important;
+        backdrop-filter: blur(12px);
+        border-right: 1px solid #778da9;
     }
+
+    .legible-metric, .weave-instruction {
+        color: #ffffff !important;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    }
+
+    .text-mystic {
+        color: #00b4d8;
+        font-weight: bold;
+        text-shadow: 0 0 15px rgba(0, 180, 216, 0.8);
+    }
+
     .btn-primary {
         background-color: #778da9;
         border: none;
         color: #0d1b2a;
         font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    .btn-primary:hover {
-        background-color: #ffffff;
-        box-shadow: 0 0 15px #ffffff;
-        color: #0d1b2a;
-    }
-    /* Forces white color for requested labels and values */
-    .legible-metric {
-        color: #ffffff !important;
-        font-size: 1.1rem;
-    }
-    .weave-instruction {
-        color: #ffffff !important;
-        font-style: italic;
-        margin-top: 20px;
-        display: block;
-    }
-    .shiny-input-container label {
-        color: #778da9;
-    }
-    .text-mystic {
-        color: #00b4d8;
-        font-weight: bold;
-        text-shadow: 0 0 10px rgba(0, 180, 216, 0.6);
     }
 """
 
 app_ui = ui.page_fluid(
     ui.tags.style(mystical_css),
-    ui.panel_title(ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4")),
+    
+    # The Background Video element
+    ui.tags.video(
+        ui.tags.source(src=VIDEO_URL, type="video/mp4"),
+        id="bg-video",
+        autoplay=True,
+        loop=True,
+        playsinline=True,
+        # Note: 'muted' is omitted to allow sound, but browsers may block autoplay
+    ),
+
+    ui.panel_title(ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4 text-white")),
     
     ui.layout_sidebar(
         ui.sidebar(
-            ui.input_select(
-                "rarity", 
-                "Item Rarity", 
-                choices=["Common", "Uncommon", "Rare", "Very Rare"]
-            ),
+            ui.input_select("rarity", "Item Rarity", 
+                           choices=["Common", "Uncommon", "Rare", "Very Rare"]),
             ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
-            
-            ui.tooltip(
-                ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
-                "The silver-tongued may find lower prices.",
-                id="persuasion_tip"
-            ),
-            
+            ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
             ui.input_action_button("reroll", "Invoke New Price", class_="btn-primary w-100 mt-3"),
-            
             ui.hr(),
             ui.span("Adjust the weave of fate to see the price shift.", class_="weave-instruction"),
         ),
@@ -136,16 +140,9 @@ def server(input, output, session):
             ui.p(ui.span(f"Base Market Value: {bp:,} gp", class_="legible-metric")),
             ui.p(ui.span(f"Charisma Concession: {p_disc}%", class_="legible-metric")),
             ui.p(ui.span(f"Total Reduction: {total_disc}%", class_="legible-metric")),
-            ui.hr(style="border-top: 1px solid #778da9;"),
+            ui.hr(style="border-top: 1px solid rgba(119, 141, 169, 0.5);"),
             ui.h3(f"Final Tribute: {final_price:,} gp", class_="text-mystic"),
-            ui.div(
-                ui.p(
-                    "The merchant awaits your coin." if total_disc < 30 
-                    else "A legendary bargain has been struck.",
-                    class_="fst-italic",
-                    style="color: #778da9;"
-                )
-            )
+            ui.p("The merchant awaits your coin.", class_="fst-italic text-white-50")
         )
 
 app = App(app_ui, server)
