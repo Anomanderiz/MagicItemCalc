@@ -1,106 +1,115 @@
 from shiny import App, render, ui, reactive
 import random
 
-# --- Logic Remains Unchanged ---
+# --- Core Logic ---
 def roll_price(r: str) -> int:
     if r == "Common": return (random.randint(1, 6) + 1) * 10
     elif r == "Uncommon":
-        base = random.randint(1, 6) * 100
-        return int(base * (1 + random.choice([0, 0.10, 0.15])))
+        return int(random.randint(1, 6) * 100 * (1 + random.choice([0, 0.10, 0.15])))
     elif r == "Rare":
-        base = (random.randint(1, 10) + random.randint(1, 10)) * 1000
-        return int(base * (1 + random.uniform(0.10, 0.15)))
+        return int((random.randint(1, 10) + random.randint(1, 10)) * 1000 * (1 + random.uniform(0.10, 0.15)))
     elif r == "Very Rare":
-        base = (random.randint(1, 4) + 1) * 10000
-        return int(base * (1 + random.uniform(0.10, 0.15)))
+        return int((random.randint(1, 4) + 1) * 10000 * (1 + random.uniform(0.10, 0.15)))
     return 0
 
 def get_persuasion_discount(roll: int) -> int:
     if roll < 15: return 0
-    if roll <= 17: return 5
     if roll <= 20: return 10
-    if roll <= 23: return 15
     if roll <= 26: return 20
-    if roll <= 29: return 25
     return 30
 
-# --- The Visual & Auditory Weave ---
-# REPLACE THIS URL with your actual GitHub Raw link
-VIDEO_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/Magic_Popup_Shop%20(1).mp4"
+# --- The Visual Anchor ---
+VIDEO_URL = "https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/assets/Magic_Popup_Shop%20(1).mp4"
 
 mystical_css = """
-    /* Background Video Layering */
-    #bg-video {
+    /* Ensure the video acts as the base layer of reality */
+    #video-bg-container {
         position: fixed;
-        right: 0;
-        bottom: 0;
-        min-width: 100%;
-        min-height: 100%;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         z-index: -1;
+        overflow: hidden;
+    }
+    #bg-video {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
-        filter: brightness(0.4) contrast(1.1); /* Darken to ensure text pop */
+        filter: brightness(0.35) contrast(1.2);
     }
 
     body {
         background-color: #000814;
-        color: #e0e1dd;
-        font-family: 'Segoe UI', serif;
-        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
     }
 
-    /* Translucent containers to let the video peek through */
+    /* Transcendental UI Styling */
     .container-fluid {
         position: relative;
         z-index: 1;
-        background: transparent;
+        padding: 2rem;
     }
 
     .card {
-        background-color: rgba(13, 27, 42, 0.7) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(119, 141, 169, 0.4);
-        border-radius: 12px;
+        background-color: rgba(13, 27, 42, 0.75) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(192, 192, 192, 0.3);
+        border-radius: 15px;
+        color: #ffffff;
     }
 
     .sidebar {
-        background-color: rgba(27, 38, 59, 0.8) !important;
-        backdrop-filter: blur(12px);
-        border-right: 1px solid #778da9;
+        background-color: rgba(27, 38, 59, 0.85) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(119, 141, 169, 0.4);
+        border-radius: 15px;
+        color: #ffffff;
     }
 
-    .legible-metric, .weave-instruction {
+    /* Absolute Legibility */
+    .legible-metric, .weave-instruction, h1, label {
         color: #ffffff !important;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
     }
 
     .text-mystic {
-        color: #00b4d8;
+        color: #00d4ff;
         font-weight: bold;
-        text-shadow: 0 0 15px rgba(0, 180, 216, 0.8);
+        text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
     }
 
-    .btn-primary {
-        background-color: #778da9;
-        border: none;
+    .btn-silver {
+        background-color: #e0e1dd;
         color: #0d1b2a;
         font-weight: bold;
+        border-radius: 8px;
+        border: none;
+        transition: 0.3s;
+    }
+    .btn-silver:hover {
+        background-color: #ffffff;
+        box-shadow: 0 0 15px #ffffff;
     }
 """
 
 app_ui = ui.page_fluid(
     ui.tags.style(mystical_css),
     
-    # The Background Video element
-    ui.tags.video(
-        ui.tags.source(src=VIDEO_URL, type="video/mp4"),
-        id="bg-video",
-        autoplay=True,
-        loop=True,
-        playsinline=True,
-        # Note: 'muted' is omitted to allow sound, but browsers may block autoplay
+    # Video Layer
+    ui.tags.div(
+        ui.tags.video(
+            ui.tags.source(src=VIDEO_URL, type="video/mp4"),
+            id="bg-video",
+            autoplay=True,
+            loop=True,
+            playsinline=True
+        ),
+        id="video-bg-container"
     ),
 
-    ui.panel_title(ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4 text-white")),
+    ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4"),
     
     ui.layout_sidebar(
         ui.sidebar(
@@ -108,7 +117,7 @@ app_ui = ui.page_fluid(
                            choices=["Common", "Uncommon", "Rare", "Very Rare"]),
             ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
             ui.input_numeric("persuasion_roll", "Persuasion Check", value=10, min=1, max=40),
-            ui.input_action_button("reroll", "Invoke New Price", class_="btn-primary w-100 mt-3"),
+            ui.input_action_button("reroll", "Invoke New Price", class_="btn-silver w-100 mt-3"),
             ui.hr(),
             ui.span("Adjust the weave of fate to see the price shift.", class_="weave-instruction"),
         ),
@@ -137,12 +146,11 @@ def server(input, output, session):
         final_price = int(bp * (1 - total_disc / 100))
         
         return ui.div(
-            ui.p(ui.span(f"Base Market Value: {bp:,} gp", class_="legible-metric")),
-            ui.p(ui.span(f"Charisma Concession: {p_disc}%", class_="legible-metric")),
-            ui.p(ui.span(f"Total Reduction: {total_disc}%", class_="legible-metric")),
-            ui.hr(style="border-top: 1px solid rgba(119, 141, 169, 0.5);"),
+            ui.p(class_="legible-metric", children=[ui.strong("Base Market Value: "), f"{bp:,} gp"]),
+            ui.p(class_="legible-metric", children=[ui.strong("Charisma Concession: "), f"{p_disc}%"]),
+            ui.p(class_="legible-metric", children=[ui.strong("Total Reduction: "), f"{total_disc}%"]),
+            ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h3(f"Final Tribute: {final_price:,} gp", class_="text-mystic"),
-            ui.p("The merchant awaits your coin.", class_="fst-italic text-white-50")
         )
 
 app = App(app_ui, server)
