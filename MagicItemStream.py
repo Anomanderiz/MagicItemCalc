@@ -27,7 +27,7 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 29: return 25
     return 30
 
-# --- Custom Mystical Styles ---
+# --- Refined Mystical Styles ---
 mystical_css = """
     body {
         background: radial-gradient(circle at center, #0d1b2a 0%, #000814 100%);
@@ -37,15 +37,15 @@ mystical_css = """
     .card {
         background-color: rgba(27, 38, 59, 0.8);
         border: 1px solid #778da9;
-        box-shadow: 0 0 15px rgba(119, 141, 169, 0.3);
+        box-shadow: 0 0 20px rgba(0, 180, 216, 0.1);
         border-radius: 12px;
     }
     .card-header {
         background-color: #415a77 !important;
-        color: #e0e1dd;
+        color: #ffffff !important;
         font-weight: bold;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
     }
     .sidebar {
         background-color: #1b263b !important;
@@ -59,20 +59,28 @@ mystical_css = """
         transition: all 0.3s ease;
     }
     .btn-primary:hover {
-        background-color: #e0e1dd;
-        box-shadow: 0 0 10px #e0e1dd;
+        background-color: #ffffff;
+        box-shadow: 0 0 15px #ffffff;
         color: #0d1b2a;
     }
-    .shiny-input-container {
-        color: #778da9;
+    /* Forces white color for requested labels and values */
+    .legible-metric {
+        color: #ffffff !important;
+        font-size: 1.1rem;
     }
-    h1, h3 {
-        color: #e0e1dd;
-        text-shadow: 0 0 8px rgba(224, 225, 221, 0.5);
+    .weave-instruction {
+        color: #ffffff !important;
+        font-style: italic;
+        margin-top: 20px;
+        display: block;
+    }
+    .shiny-input-container label {
+        color: #778da9;
     }
     .text-mystic {
         color: #00b4d8;
         font-weight: bold;
+        text-shadow: 0 0 10px rgba(0, 180, 216, 0.6);
     }
 """
 
@@ -98,13 +106,12 @@ app_ui = ui.page_fluid(
             ui.input_action_button("reroll", "Invoke New Price", class_="btn-primary w-100 mt-3"),
             
             ui.hr(),
-            ui.markdown("*Adjust the weave of fate to see the price shift.*"),
+            ui.span("Adjust the weave of fate to see the price shift.", class_="weave-instruction"),
         ),
         
         ui.card(
             ui.card_header("Arcane Valuation"),
             ui.output_ui("results_display"),
-            full_screen=True,
         ),
     ),
 )
@@ -126,9 +133,9 @@ def server(input, output, session):
         final_price = int(bp * (1 - total_disc / 100))
         
         return ui.div(
-            ui.p(ui.strong("Base Market Value: "), f"{bp:,} gp"),
-            ui.p(ui.strong("Charisma Concession: "), f"{p_disc}%"),
-            ui.p(ui.strong("Total Reduction: "), f"{total_disc}%"),
+            ui.p(ui.span(f"Base Market Value: {bp:,} gp", class_="legible-metric")),
+            ui.p(ui.span(f"Charisma Concession: {p_disc}%", class_="legible-metric")),
+            ui.p(ui.span(f"Total Reduction: {total_disc}%", class_="legible-metric")),
             ui.hr(style="border-top: 1px solid #778da9;"),
             ui.h3(f"Final Tribute: {final_price:,} gp", class_="text-mystic"),
             ui.div(
