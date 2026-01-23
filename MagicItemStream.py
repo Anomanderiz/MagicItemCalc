@@ -19,10 +19,10 @@ def get_persuasion_discount(roll: int) -> int:
     return 30
 
 # --- The Visual Anchor ---
+# Note: Ensure this URL points directly to the raw mp4 file.
 VIDEO_URL = "https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/assets/Magic_Popup_Shop%20(1).mp4"
 
 mystical_css = """
-    /* Ensure the video acts as the base layer of reality */
     #video-bg-container {
         position: fixed;
         top: 0;
@@ -36,7 +36,7 @@ mystical_css = """
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: brightness(0.35) contrast(1.2);
+        filter: brightness(0.3) contrast(1.2);
     }
 
     body {
@@ -45,7 +45,6 @@ mystical_css = """
         padding: 0;
     }
 
-    /* Transcendental UI Styling */
     .container-fluid {
         position: relative;
         z-index: 1;
@@ -53,63 +52,62 @@ mystical_css = """
     }
 
     .card {
-        background-color: rgba(13, 27, 42, 0.75) !important;
+        background-color: rgba(13, 27, 42, 0.8) !important;
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(192, 192, 192, 0.3);
+        border: 1px solid rgba(224, 225, 221, 0.3);
         border-radius: 15px;
         color: #ffffff;
     }
 
     .sidebar {
-        background-color: rgba(27, 38, 59, 0.85) !important;
+        background-color: rgba(27, 38, 59, 0.9) !important;
         backdrop-filter: blur(15px);
         border: 1px solid rgba(119, 141, 169, 0.4);
         border-radius: 15px;
         color: #ffffff;
     }
 
-    /* Absolute Legibility */
-    .legible-metric, .weave-instruction, h1, label {
+    .legible-white, label, .weave-instruction {
         color: #ffffff !important;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 1);
     }
 
     .text-mystic {
         color: #00d4ff;
         font-weight: bold;
-        text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
+        text-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
     }
 
     .btn-silver {
         background-color: #e0e1dd;
         color: #0d1b2a;
         font-weight: bold;
-        border-radius: 8px;
         border: none;
-        transition: 0.3s;
+        transition: 0.3s ease-in-out;
     }
     .btn-silver:hover {
         background-color: #ffffff;
-        box-shadow: 0 0 15px #ffffff;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
     }
 """
 
 app_ui = ui.page_fluid(
     ui.tags.style(mystical_css),
     
-    # Video Layer
+    # Video Foundation
     ui.tags.div(
         ui.tags.video(
             ui.tags.source(src=VIDEO_URL, type="video/mp4"),
             id="bg-video",
             autoplay=True,
             loop=True,
-            playsinline=True
+            playsinline=True,
+            muted=True # Essential for most browsers to allow autoplay
         ),
         id="video-bg-container"
     ),
 
-    ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4"),
+    ui.h1("🔮 Mystic Market Valuator", class_="text-center py-4 text-white"),
     
     ui.layout_sidebar(
         ui.sidebar(
@@ -145,10 +143,11 @@ def server(input, output, session):
         total_disc = input.discount() + p_disc
         final_price = int(bp * (1 - total_disc / 100))
         
+        # Using positional arguments for content to avoid list-attribute errors
         return ui.div(
-            ui.p(class_="legible-metric", children=[ui.strong("Base Market Value: "), f"{bp:,} gp"]),
-            ui.p(class_="legible-metric", children=[ui.strong("Charisma Concession: "), f"{p_disc}%"]),
-            ui.p(class_="legible-metric", children=[ui.strong("Total Reduction: "), f"{total_disc}%"]),
+            ui.p(ui.strong("Base Market Value: "), f"{bp:,} gp", class_="legible-white"),
+            ui.p(ui.strong("Charisma Concession: "), f"{p_disc}%", class_="legible-white"),
+            ui.p(ui.strong("Total Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h3(f"Final Tribute: {final_price:,} gp", class_="text-mystic"),
         )
