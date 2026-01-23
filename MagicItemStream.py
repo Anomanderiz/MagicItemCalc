@@ -16,7 +16,7 @@ def send_to_discord(char_name, rarity, base, final, total_discount):
         "username": "Madame Morrible",
         "embeds": [{
             "title": "📜 Arcane Transaction Chronicled",
-            "color": 0x00f2ff, # A luminous, spectral cyan
+            "color": 0x00f2ff,
             "description": f"The weave has finalized a deal for **{char_name}**.",
             "fields": [
                 {"name": "Artifact Rarity", "value": rarity, "inline": True},
@@ -29,7 +29,6 @@ def send_to_discord(char_name, rarity, base, final, total_discount):
     }
     
     try:
-        # We use a timeout to ensure a stalled connection doesn't freeze the Madame's interface.
         response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
         return response.status_code == 204
     except Exception:
@@ -163,7 +162,7 @@ def server(input, output, session):
         total_disc = input.discount() + p_disc
         final_price = int(new_base * (1 - total_disc / 100))
         
-        # 3. Automatic Dissemination: No button, no mercy.
+        # 3. Automatic Dissemination: The Madame sends word immediately.
         send_to_discord(char_name, input.rarity(), new_base, final_price, total_disc)
 
     @output
@@ -182,7 +181,7 @@ def server(input, output, session):
             ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The transaction has been chronicled in the Discord ledger.", style="font-style: italic; opacity: 0.7;")
+            ui.p("The transaction has been chronicled automatically.", style="font-style: italic; opacity: 0.7;")
         )
 
 # Serving static assets from the local 'www' directory
