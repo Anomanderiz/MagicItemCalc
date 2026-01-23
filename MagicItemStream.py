@@ -7,7 +7,7 @@ import requests
 # Replace with the unique thread-link provided by your Discord server settings.
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1464165711759937689/QHY4-RHmThzEGWUaMf1oo2eZYo-rBqcX2txQZjJcqsCQbqd5alH7V6fRls1Xz8B92SJi"
 
-def send_to_discord(char_name, rarity, base, final, total_discount):
+def send_to_discord(char_name, artifact_name, rarity, base, final, total_discount):
     """Dispatches a formatted missive to the Madame's Discord ledger."""
     if not DISCORD_WEBHOOK_URL or DISCORD_WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_URL":
         return False
@@ -19,7 +19,8 @@ def send_to_discord(char_name, rarity, base, final, total_discount):
             "color": 0x00f2ff,
             "description": f"The weave has finalized a deal for **{char_name}**.",
             "fields": [
-                {"name": "Artifact Rarity", "value": rarity, "inline": True},
+                {"name": "Artifact", "value": f"*{artifact_name}*", "inline": False},
+                {"name": "Rarity", "value": rarity, "inline": True},
                 {"name": "Market Value", "value": f"{base:,} gp", "inline": True},
                 {"name": "Total Concession", "value": f"{total_discount}%", "inline": True},
                 {"name": "Final Tribute", "value": f"**{final:,} gp**", "inline": False}
@@ -52,7 +53,7 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 26: return 20
     return 30
 
-# --- Advanced Glassmorphic Visuals ---
+# --- Glassmorphic Visuals ---
 glass_css = """
     #video-container {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -80,12 +81,10 @@ glass_css = """
         text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         font-family: 'Palatino', serif;
     }
-    /* Enforced White Labels */
     .control-label, label, .legible-white {
         color: #ffffff !important; font-weight: 500;
         text-shadow: 2px 2px 4px rgba(0,0,0,1);
     }
-    /* Larger Structural Text */
     .receipt-title { font-size: 1.8rem !important; font-weight: bold; }
     .weave-instruction {
         color: #ffffff !important; font-size: 1.4rem; font-style: italic;
@@ -127,7 +126,8 @@ app_ui = ui.page_fluid(
     ui.layout_sidebar(
         ui.sidebar(
             ui.div(
-                ui.input_text("character_name", "Seeker's Name", placeholder="Whisper your name..."),
+                ui.input_text("character_name", "Seeker's Name", placeholder="Who dares bargain?"),
+                ui.input_text("artifact_name", "Artifact Name", placeholder="What treasure is this?"),
                 ui.input_select("rarity", "Artifact Rarity", 
                                choices=["Common", "Uncommon", "Rare", "Very Rare"]),
                 ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
@@ -149,15 +149,17 @@ app_ui = ui.page_fluid(
 )
 
 def server(input, output, session):
-    # Initialize at 0; no roll has occurred yet.
     base_price = reactive.Value(0)
 
     @reactive.Effect
     @reactive.event(input.rarity, input.reroll)
     def _():
-        # The Madame requires a name before she begins the roll.
-        if not input.character_name().strip():
-            ui.notification_show("The Madame awaits a name before the stars can be consulted.", type="warning")
+        char = input.character_name().strip()
+        art = input.artifact_name().strip()
+
+        # The Madame requires both names before the ritual begins.
+        if not char or not art:
+            ui.notification_show("Both Seeker and Artifact must be named before the stars speak.", type="warning")
             return
 
         # 1. Generate the base market value
@@ -165,30 +167,29 @@ def server(input, output, session):
         base_price.set(new_base)
         
         # 2. Compute the current finalities
-        char_name = input.character_name().strip()
         p_disc = get_persuasion_discount(input.persuasion_roll())
         total_disc = input.discount() + p_disc
         final_price = int(new_base * (1 - total_disc / 100))
         
-        # 3. Automatic Dissemination
-        send_to_discord(char_name, input.rarity(), new_base, final_price, total_disc)
+        # 3. Automatic Dissemination to Discord
+        send_to_discord(char, art, input.rarity(), new_base, final_price, total_disc)
 
     @output
     @render.ui
     def valuation_output():
-        name = input.character_name().strip()
+        char = input.character_name().strip()
+        art = input.artifact_name().strip()
         
-        # If no name is entered, display a prompt instead of the receipt
-        if not name:
+        # Name-gate the receipt display
+        if not char or not art:
             return ui.div(
-                ui.p("Provide your name to the sidebar to unveil the destiny of this artifact.", 
+                ui.p("Names are the anchors of reality. Provide both Seeker and Artifact to unveil the cost.", 
                      class_="legible-white fst-italic", style="font-size: 1.2rem; margin-top: 20px;")
             )
         
-        # If a name exists but no roll has happened yet
         if base_price() == 0:
             return ui.div(
-                ui.p(f"Welcome, {name}. Press 'Invoke Valuation' to see what the stars hold.", 
+                ui.p(f"The artifact '{art}' awaits its destiny for {char}. Invoke the valuation.", 
                      class_="legible-white fst-italic", style="margin-top: 20px;")
             )
 
@@ -198,15 +199,16 @@ def server(input, output, session):
         final_price = int(bp * (1 - total_disc / 100))
         
         return ui.div(
-            ui.p(ui.strong("Seeker: "), name, class_="legible-white"),
+            ui.p(ui.strong("Seeker: "), char, class_="legible-white"),
+            ui.p(ui.strong("Artifact: "), art, class_="legible-white"),
             ui.p(ui.strong("Market Value: "), f"{bp:,} gp", class_="legible-white"),
             ui.p(ui.strong("Influence Bonus: "), f"{p_disc}%", class_="legible-white"),
             ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The transaction is inscribed in the eternal ledger.", style="font-style: italic; opacity: 0.7;")
+            ui.p("This transaction is now eternal in the Discord ledger.", style="font-style: italic; opacity: 0.7;")
         )
 
-# Identify the 'www' directory for static assets
+# Identifying the 'www' directory for static assets
 www_path = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=str(www_path))
