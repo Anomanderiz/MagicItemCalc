@@ -52,7 +52,7 @@ def get_persuasion_discount(roll: int) -> int:
     if roll <= 26: return 20
     return 30
 
-# --- Glassmorphic Visuals ---
+# --- Advanced Glassmorphic Visuals ---
 glass_css = """
     #video-container {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -80,10 +80,12 @@ glass_css = """
         text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         font-family: 'Palatino', serif;
     }
+    /* Enforced White Labels */
     .control-label, label, .legible-white {
         color: #ffffff !important; font-weight: 500;
         text-shadow: 2px 2px 4px rgba(0,0,0,1);
     }
+    /* Larger Structural Text */
     .receipt-title { font-size: 1.8rem !important; font-weight: bold; }
     .weave-instruction {
         color: #ffffff !important; font-size: 1.4rem; font-style: italic;
@@ -125,7 +127,7 @@ app_ui = ui.page_fluid(
     ui.layout_sidebar(
         ui.sidebar(
             ui.div(
-                ui.input_text("character_name", "Seeker's Name", placeholder="Who dares bargain?"),
+                ui.input_text("character_name", "Seeker's Name", placeholder="Whisper your name..."),
                 ui.input_select("rarity", "Artifact Rarity", 
                                choices=["Common", "Uncommon", "Rare", "Very Rare"]),
                 ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
@@ -147,32 +149,53 @@ app_ui = ui.page_fluid(
 )
 
 def server(input, output, session):
+    # Initialize at 0; no roll has occurred yet.
     base_price = reactive.Value(0)
 
     @reactive.Effect
     @reactive.event(input.rarity, input.reroll)
     def _():
+        # The Madame requires a name before she begins the roll.
+        if not input.character_name().strip():
+            ui.notification_show("The Madame awaits a name before the stars can be consulted.", type="warning")
+            return
+
         # 1. Generate the base market value
         new_base = roll_price(input.rarity())
         base_price.set(new_base)
         
         # 2. Compute the current finalities
-        char_name = input.character_name() or "A Nameless Seeker"
+        char_name = input.character_name().strip()
         p_disc = get_persuasion_discount(input.persuasion_roll())
         total_disc = input.discount() + p_disc
         final_price = int(new_base * (1 - total_disc / 100))
         
-        # 3. Automatic Dissemination: The Madame sends word immediately.
+        # 3. Automatic Dissemination
         send_to_discord(char_name, input.rarity(), new_base, final_price, total_disc)
 
     @output
     @render.ui
     def valuation_output():
+        name = input.character_name().strip()
+        
+        # If no name is entered, display a prompt instead of the receipt
+        if not name:
+            return ui.div(
+                ui.p("Provide your name to the sidebar to unveil the destiny of this artifact.", 
+                     class_="legible-white fst-italic", style="font-size: 1.2rem; margin-top: 20px;")
+            )
+        
+        # If a name exists but no roll has happened yet
+        if base_price() == 0:
+            return ui.div(
+                ui.p(f"Welcome, {name}. Press 'Invoke Valuation' to see what the stars hold.", 
+                     class_="legible-white fst-italic", style="margin-top: 20px;")
+            )
+
         bp = base_price()
         p_disc = get_persuasion_discount(input.persuasion_roll())
         total_disc = input.discount() + p_disc
         final_price = int(bp * (1 - total_disc / 100))
-        name = input.character_name() or "A Nameless Seeker"
         
         return ui.div(
             ui.p(ui.strong("Seeker: "), name, class_="legible-white"),
@@ -181,9 +204,9 @@ def server(input, output, session):
             ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
             ui.h2(f"{final_price:,} gp", class_="text-mystic"),
-            ui.p("The transaction has been chronicled automatically.", style="font-style: italic; opacity: 0.7;")
+            ui.p("The transaction is inscribed in the eternal ledger.", style="font-style: italic; opacity: 0.7;")
         )
 
-# Serving static assets from the local 'www' directory
+# Identify the 'www' directory for static assets
 www_path = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=str(www_path))
