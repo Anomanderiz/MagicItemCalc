@@ -2,6 +2,7 @@ from pathlib import Path
 from shiny import App, render, ui, reactive
 import random
 import requests
+import threading
 
 # --- Discord Webhook Configuration ---
 # Replace with the unique thread-link provided by your Discord server settings.
@@ -15,7 +16,7 @@ def send_to_discord(char_name, artifact_name, rarity, base, final, total_discoun
     payload = {
         "username": "Madame Morrible",
         "embeds": [{
-            "title": "📜 Arcane Transaction Chronicled",
+            "title": "Arcane Transaction Chronicled",
             "color": 0x00f2ff,
             "description": f"The weave has finalized a deal for **{char_name}**.",
             "fields": [
@@ -55,9 +56,15 @@ def get_persuasion_discount(roll: int) -> int:
 
 # --- Glassmorphic Visuals ---
 glass_css = """
+    html, body {
+        height: 100%;
+    }
     #video-container {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         z-index: -1; overflow: hidden; background: #000;
+    }
+    @supports (height: 100svh) {
+        #video-container { height: 100svh; }
     }
     #bg-video {
         width: 100%; height: 100%; object-fit: cover;
@@ -81,9 +88,17 @@ glass_css = """
         text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         font-family: 'Palatino', serif;
     }
+    .hero-title {
+        font-size: 2.8rem;
+        padding-top: 2.5rem !important;
+        padding-bottom: 2.5rem !important;
+    }
     .control-label, label, .legible-white {
         color: #ffffff !important; font-weight: 500;
         text-shadow: 2px 2px 4px rgba(0,0,0,1);
+    }
+    .layout-shell {
+        padding: 0 24px 40px;
     }
     .receipt-title { font-size: 1.8rem !important; font-weight: bold; }
     .weave-instruction {
@@ -111,9 +126,29 @@ glass_css = """
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         color: white !important;
     }
+    @media (max-width: 768px), (max-aspect-ratio: 3/4) {
+        .hero-title {
+            font-size: 1.9rem;
+            letter-spacing: 2px;
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+        }
+        .layout-shell {
+            padding: 0 12px 28px;
+        }
+        .glass-panel {
+            padding: 16px;
+            border-radius: 18px !important;
+        }
+        .receipt-title { font-size: 1.4rem !important; }
+        .weave-instruction { font-size: 1.05rem; margin-top: 12px; }
+        .text-mystic { font-size: 2rem; }
+        .btn-glass { padding: 0.75rem 1rem; }
+    }
 """
 
 app_ui = ui.page_fluid(
+    ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1"),
     ui.tags.style(glass_css),
     ui.tags.div(
         ui.tags.video(
@@ -122,38 +157,55 @@ app_ui = ui.page_fluid(
         ),
         id="video-container"
     ),
-    ui.h1("Madame Morrible's Magic Mores", class_="text-center py-5 text-white"),
-    ui.layout_sidebar(
-        ui.sidebar(
-            ui.div(
-                ui.input_text("character_name", "Seeker's Name", placeholder="Who dares bargain?"),
-                ui.input_text("artifact_name", "Artifact Name", placeholder="What treasure is this?"),
-                ui.input_select("rarity", "Artifact Rarity", 
-                               choices=["Common", "Uncommon", "Rare", "Very Rare"]),
-                ui.input_slider("discount", "Manual Discount (%)", 0, 100, 0),
-                ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
-                ui.input_action_button("reroll", "Invoke Valuation", class_="btn-glass w-100 mt-3"),
-                class_="glass-panel"
+    ui.h1("Madame Morrible's Magic Mores", class_="text-center py-5 text-white hero-title"),
+    ui.div(
+        ui.layout_sidebar(
+            ui.sidebar(
+                ui.div(
+                    ui.input_text("character_name", "Seeker's Name", placeholder="Who dares bargain?"),
+                    ui.input_text("artifact_name", "Artifact Name", placeholder="What treasure is this?"),
+                    ui.input_select("rarity", "Artifact Rarity", 
+                                   choices=["Common", "Uncommon", "Rare", "Very Rare"]),
+                    ui.input_slider("discount", "Manual Discount (%)", 0, 30, 0),
+                    ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
+                    ui.input_action_button("reroll", "Invoke Valuation", class_="btn-glass w-100 mt-3"),
+                    class_="glass-panel"
+                ),
+                ui.hr(style="opacity: 0.2;"),
+                ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2")
             ),
-            ui.hr(style="opacity: 0.2;"),
-            ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2")
+            ui.div(
+                ui.card(
+                    ui.card_header("Arcane Receipt", class_="receipt-title", style="background:transparent; color: #fff;"),
+                    ui.output_ui("valuation_output"),
+                    class_="glass-panel"
+                )
+            ),
         ),
-        ui.div(
-            ui.card(
-                ui.card_header("Arcane Receipt", class_="receipt-title", style="background:transparent; color: #fff;"),
-                ui.output_ui("valuation_output"),
-                class_="glass-panel"
-            )
-        ),
+        class_="layout-shell"
     ),
 )
 
 def server(input, output, session):
     base_price = reactive.Value(0)
+    last_sent = reactive.Value(None)
+
+    @reactive.Calc
+    def total_discount():
+        manual_disc = input.discount()
+        persuasion_disc = get_persuasion_discount(input.persuasion_roll())
+        return min(30, manual_disc + persuasion_disc)
+
+    @reactive.Calc
+    def final_price():
+        bp = base_price()
+        if bp <= 0:
+            return 0
+        return int(bp * (1 - total_discount() / 100))
 
     @reactive.Effect
     @reactive.event(input.rarity, input.reroll)
-    def _():
+    def _roll_base_price():
         char = input.character_name().strip()
         art = input.artifact_name().strip()
 
@@ -165,14 +217,27 @@ def server(input, output, session):
         # 1. Generate the base market value
         new_base = roll_price(input.rarity())
         base_price.set(new_base)
-        
-        # 2. Compute the current finalities
-        p_disc = get_persuasion_discount(input.persuasion_roll())
-        total_disc = input.discount() + p_disc
-        final_price = int(new_base * (1 - total_disc / 100))
-        
-        # 3. Automatic Dissemination to Discord
-        send_to_discord(char, art, input.rarity(), new_base, final_price, total_disc)
+
+    @reactive.Effect
+    def _send_discord():
+        char = input.character_name().strip()
+        art = input.artifact_name().strip()
+        bp = base_price()
+        if not char or not art or bp == 0:
+            return
+
+        total_disc = total_discount()
+        final_cost = final_price()
+        current = (bp, total_disc, final_cost)
+        if last_sent.get() == current:
+            return
+
+        last_sent.set(current)
+        threading.Thread(
+            target=send_to_discord,
+            args=(char, art, input.rarity(), bp, final_cost, total_disc),
+            daemon=True
+        ).start()
 
     @output
     @render.ui
@@ -195,8 +260,8 @@ def server(input, output, session):
 
         bp = base_price()
         p_disc = get_persuasion_discount(input.persuasion_roll())
-        total_disc = input.discount() + p_disc
-        final_price = int(bp * (1 - total_disc / 100))
+        total_disc = total_discount()
+        final_cost = final_price()
         
         return ui.div(
             ui.p(ui.strong("Seeker: "), char, class_="legible-white"),
@@ -205,7 +270,7 @@ def server(input, output, session):
             ui.p(ui.strong("Influence Bonus: "), f"{p_disc}%", class_="legible-white"),
             ui.p(ui.strong("Aggregate Reduction: "), f"{total_disc}%", class_="legible-white"),
             ui.hr(style="border-top: 1px solid rgba(255, 255, 255, 0.3);"),
-            ui.h2(f"{final_price:,} gp", class_="text-mystic"),
+            ui.h2(f"{final_cost:,} gp", class_="text-mystic"),
             ui.p("This transaction is now eternal in the Discord ledger.", style="font-style: italic; opacity: 0.7;")
         )
 
