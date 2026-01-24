@@ -127,6 +127,19 @@ glass_css = """
         color: white !important;
     }
     @media (max-width: 768px), (max-aspect-ratio: 3/4) {
+        .layout-shell .bslib-sidebar-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .layout-shell .bslib-sidebar-layout > .sidebar {
+            order: 1;
+            width: 100%;
+        }
+        .layout-shell .bslib-sidebar-layout > .main {
+            order: 2;
+            width: 100%;
+        }
         .hero-title {
             font-size: 1.9rem;
             letter-spacing: 2px;
@@ -172,7 +185,9 @@ app_ui = ui.page_fluid(
                     class_="glass-panel"
                 ),
                 ui.hr(style="opacity: 0.2;"),
-                ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2")
+                ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2"),
+                open="always",
+                max_height_mobile="100vh"
             ),
             ui.div(
                 ui.card(
@@ -228,7 +243,7 @@ def server(input, output, session):
 
         total_disc = total_discount()
         final_cost = final_price()
-        current = (bp, total_disc, final_cost)
+        current = (char, art, input.rarity(), bp, total_disc, final_cost)
         if last_sent.get() == current:
             return
 
