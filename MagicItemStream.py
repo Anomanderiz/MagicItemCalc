@@ -219,7 +219,7 @@ def server(input, output, session):
         return int(bp * (1 - total_discount() / 100))
 
     @reactive.Effect
-    @reactive.event(input.rarity, input.reroll)
+    @reactive.event(input.reroll)
     def _roll_base_price():
         char = input.character_name().strip()
         art = input.artifact_name().strip()
