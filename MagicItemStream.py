@@ -204,6 +204,7 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     base_price = reactive.Value(0)
     last_sent = reactive.Value(None)
+    last_processed_reroll = reactive.Value(0)
 
     @reactive.Calc
     def total_discount():
@@ -219,8 +220,13 @@ def server(input, output, session):
         return int(bp * (1 - total_discount() / 100))
 
     @reactive.Effect
-    @reactive.event(input.reroll)
+    @reactive.event(input.reroll, ignore_init=True)
     def _roll_base_price():
+        reroll_count = input.reroll()
+        if reroll_count <= last_processed_reroll.get():
+            return
+        last_processed_reroll.set(reroll_count)
+
         char = input.character_name().strip()
         art = input.artifact_name().strip()
 
@@ -232,25 +238,16 @@ def server(input, output, session):
         # 1. Generate the base market value
         new_base = roll_price(input.rarity())
         base_price.set(new_base)
-
-    @reactive.Effect
-    def _send_discord():
-        char = input.character_name().strip()
-        art = input.artifact_name().strip()
-        bp = base_price()
-        if not char or not art or bp == 0:
-            return
-
         total_disc = total_discount()
-        final_cost = final_price()
-        current = (char, art, input.rarity(), bp, total_disc, final_cost)
+        final_cost = int(new_base * (1 - total_disc / 100))
+        current = (char, art, input.rarity(), new_base, total_disc, final_cost)
         if last_sent.get() == current:
             return
 
         last_sent.set(current)
         threading.Thread(
             target=send_to_discord,
-            args=(char, art, input.rarity(), bp, final_cost, total_disc),
+            args=(char, art, input.rarity(), new_base, final_cost, total_disc),
             daemon=True
         ).start()
 
