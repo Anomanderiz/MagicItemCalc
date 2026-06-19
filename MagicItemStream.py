@@ -6,7 +6,9 @@ import requests
 
 # --- Discord Webhook Configuration ---
 # Replace with the unique thread-link provided by your Discord server settings.
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1464165711759937689/QHY4-RHmThzEGWUaMf1oo2eZYo-rBqcX2txQZjJcqsCQbqd5alH7V6fRls1Xz8B92SJi"
+import os
+
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 def send_to_discord(char_name, artifact_name, rarity, base, final, total_discount, consumable_price=None):
     """Dispatches a formatted missive to the Madame's Discord ledger."""
