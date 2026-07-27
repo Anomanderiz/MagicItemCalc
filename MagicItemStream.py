@@ -1,14 +1,32 @@
-from pathlib import Path
-from shiny import App, render, ui, reactive
 import math
+import os
 import random
+from pathlib import Path
+
+import bcrypt
 import requests
+from shiny import App, reactive, render, ui
 
 # --- Discord Webhook Configuration ---
 # Replace with the unique thread-link provided by your Discord server settings.
-import os
-
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
+APP_PASSWORD_HASH = os.environ.get("APP_PASSWORD_HASH")
+
+
+def verify_password(password: str) -> bool:
+    """Verify a password without ever sending the configured hash to the client."""
+    if not password or not APP_PASSWORD_HASH:
+        return False
+
+    try:
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            APP_PASSWORD_HASH.encode("utf-8"),
+        )
+    except (TypeError, ValueError):
+        # Fail closed when APP_PASSWORD_HASH is not a valid bcrypt hash.
+        return False
+
 
 def send_to_discord(char_name, artifact_name, rarity, base, final, total_discount, consumable_price=None):
     """Dispatches a formatted missive to the Madame's Discord ledger."""
@@ -151,6 +169,29 @@ glass_css = """
         transform: translateY(-3px);
         box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
     }
+    .login-shell {
+        min-height: 100vh;
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+    }
+    .login-panel {
+        width: min(100%, 430px);
+        text-align: center;
+    }
+    .login-title {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+    }
+    .login-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 1.5rem;
+    }
+    .login-error {
+        color: #ffb4b4;
+        margin: 1rem 0 0;
+    }
     .form-control, .form-select {
         background: rgba(0, 0, 0, 0.4) !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -190,6 +231,103 @@ glass_css = """
     }
 """
 
+
+def login_ui(error_message: str | None = None):
+    children = [
+        ui.h1("The Shop Is Sealed", class_="login-title"),
+        ui.p(
+            "Speak the password to enter Madame Morrible's emporium.",
+            class_="login-subtitle",
+        ),
+        ui.input_password(
+            "login_password",
+            "Password",
+            placeholder="Enter the password",
+        ),
+        ui.input_action_button(
+            "login_submit",
+            "Unlock the Door",
+            class_="btn-glass w-100 mt-3",
+        ),
+    ]
+
+    if error_message:
+        children.append(ui.p(error_message, class_="login-error", role="alert"))
+
+    return ui.div(
+        ui.div(*children, class_="glass-panel login-panel"),
+        class_="login-shell",
+    )
+
+
+def calculator_ui():
+    return ui.TagList(
+        ui.h1(
+            "Madame Morrible's Magic Mores",
+            class_="text-center py-5 text-white hero-title",
+        ),
+        ui.div(
+            ui.layout_sidebar(
+                ui.sidebar(
+                    ui.div(
+                        ui.input_text(
+                            "character_name",
+                            "Seeker's Name",
+                            placeholder="Who dares bargain?",
+                        ),
+                        ui.input_text(
+                            "artifact_name",
+                            "Artifact Name",
+                            placeholder="What treasure is this?",
+                        ),
+                        ui.input_select(
+                            "rarity",
+                            "Artifact Rarity",
+                            choices=["Common", "Uncommon", "Rare", "Very Rare"],
+                        ),
+                        ui.input_checkbox("is_consumable", "Consumable", False),
+                        ui.input_slider(
+                            "discount", "Manual Discount (%)", 0, 30, 0
+                        ),
+                        ui.input_numeric(
+                            "persuasion_roll",
+                            "Persuasion Roll",
+                            value=10,
+                            min=1,
+                            max=40,
+                        ),
+                        ui.input_action_button(
+                            "reroll",
+                            "Invoke Valuation",
+                            class_="btn-glass w-100 mt-3",
+                        ),
+                        class_="glass-panel",
+                    ),
+                    ui.hr(style="opacity: 0.2;"),
+                    ui.span(
+                        "Adjust the weave to reveal the cost.",
+                        class_="weave-instruction ms-2",
+                    ),
+                    open="always",
+                    max_height_mobile="100vh",
+                ),
+                ui.div(
+                    ui.card(
+                        ui.card_header(
+                            "Arcane Receipt",
+                            class_="receipt-title",
+                            style="background:transparent; color: #fff;",
+                        ),
+                        ui.output_ui("valuation_output"),
+                        class_="glass-panel",
+                    )
+                ),
+            ),
+            class_="layout-shell",
+        ),
+    )
+
+
 app_ui = ui.page_fluid(
     ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1"),
     ui.tags.style(glass_css),
@@ -200,41 +338,37 @@ app_ui = ui.page_fluid(
         ),
         id="video-container"
     ),
-    ui.h1("Madame Morrible's Magic Mores", class_="text-center py-5 text-white hero-title"),
-    ui.div(
-        ui.layout_sidebar(
-            ui.sidebar(
-                ui.div(
-                    ui.input_text("character_name", "Seeker's Name", placeholder="Who dares bargain?"),
-                    ui.input_text("artifact_name", "Artifact Name", placeholder="What treasure is this?"),
-                    ui.input_select("rarity", "Artifact Rarity", 
-                                   choices=["Common", "Uncommon", "Rare", "Very Rare"]),
-                    ui.input_checkbox("is_consumable", "Consumable", False),
-                    ui.input_slider("discount", "Manual Discount (%)", 0, 30, 0),
-                    ui.input_numeric("persuasion_roll", "Persuasion Roll", value=10, min=1, max=40),
-                    ui.input_action_button("reroll", "Invoke Valuation", class_="btn-glass w-100 mt-3"),
-                    class_="glass-panel"
-                ),
-                ui.hr(style="opacity: 0.2;"),
-                ui.span("Adjust the weave to reveal the cost.", class_="weave-instruction ms-2"),
-                open="always",
-                max_height_mobile="100vh"
-            ),
-            ui.div(
-                ui.card(
-                    ui.card_header("Arcane Receipt", class_="receipt-title", style="background:transparent; color: #fff;"),
-                    ui.output_ui("valuation_output"),
-                    class_="glass-panel"
-                )
-            ),
-        ),
-        class_="layout-shell"
-    ),
+    ui.output_ui("page_content"),
 )
 
+
 def server(input, output, session):
+    authenticated = reactive.Value(False)
+    login_error = reactive.Value(None)
     rolled_result = reactive.Value(None)
     last_processed_reroll = reactive.Value(0)
+
+    @output
+    @render.ui
+    def page_content():
+        if authenticated():
+            return calculator_ui()
+        return login_ui(login_error())
+
+    @reactive.Effect
+    @reactive.event(input.login_submit, ignore_init=True)
+    def _authenticate():
+        if verify_password(input.login_password()):
+            login_error.set(None)
+            authenticated.set(True)
+            return
+
+        if APP_PASSWORD_HASH:
+            login_error.set("That password did not open the door.")
+        else:
+            login_error.set(
+                "Access is not configured. Set APP_PASSWORD_HASH in the hosting environment."
+            )
 
     def current_input_signature():
         return (
@@ -258,6 +392,9 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.reroll, ignore_init=True)
     def _roll_base_price():
+        if not authenticated():
+            return
+
         reroll_count = input.reroll()
         if reroll_count <= last_processed_reroll.get():
             return
@@ -308,6 +445,9 @@ def server(input, output, session):
     @output
     @render.ui
     def valuation_output():
+        if not authenticated():
+            return ui.div()
+
         char = input.character_name().strip()
         art = input.artifact_name().strip()
         result = rolled_result()
