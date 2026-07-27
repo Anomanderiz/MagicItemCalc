@@ -180,6 +180,15 @@ glass_css = """
         width: min(100%, 430px);
         text-align: center;
     }
+    .login-panel .shiny-input-container {
+        width: 100%;
+        margin-inline: auto;
+        text-align: center;
+    }
+    .login-panel .shiny-input-container label {
+        display: block;
+        text-align: center;
+    }
     .login-title {
         font-size: 2rem;
         margin-bottom: 0.75rem;
